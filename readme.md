@@ -21,9 +21,3 @@
     ];
 	```
 
-3. Add a Listener in EventServiceProvider.php
-	```php
-	'Infinety\TemplyHome\Http\Events\ActivateWebsite' => [
-        'App\Listeners\YourListener',
-    ],
-    ```

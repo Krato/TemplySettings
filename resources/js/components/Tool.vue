@@ -64,19 +64,19 @@ export default {
                 url: '/infinety-es/temply-settings/save-settings',
                 data: this.actionFormData(),
             })
-                .then(response => {
-                    this.$toasted.show(this.__('Settings saved! - Reloading page.'), { type: 'success' });
-                    this.working = false
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
-                })
-                .catch(error => {
-                    this.working = false
-                    if (error.response.status == 422) {
-                        this.errorData = new Errors(error.response.data.errors)
-                    }
-                })
+            .then(response => {
+                this.$toasted.show(this.__('Settings saved! - Reloading page.'), { type: 'success' });
+                this.working = false
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            })
+            .catch(error => {
+                this.working = false
+                if (error.response.status == 422) {
+                    this.errorData = new Errors(error.response.data.errors)
+                }
+            })
         },
 
         /**
