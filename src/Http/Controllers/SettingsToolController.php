@@ -109,7 +109,7 @@ class SettingsToolController extends Controller
                 'attribute' => $key,
                 'component' => $this->getNovaComponent($type),
                 'value'     => $this->getNovaValue($type, $value),
-                'helpText'  => $help,
+                'helpText'  => __($help),
             ],
         ];
 
