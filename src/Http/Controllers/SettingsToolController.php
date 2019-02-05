@@ -143,6 +143,10 @@ class SettingsToolController extends Controller
             return 'form-place-field';
         }
 
+        if ($type == 'textarea') {
+            return 'form-textarea-field';
+        }
+
         return 'form-text-field';
     }
 
@@ -175,6 +179,10 @@ class SettingsToolController extends Controller
 
         if ($type == 'place') {
             return 'place-field';
+        }
+
+        if ($type == 'textarea') {
+            return 'textarea-field';
         }
 
         return 'text-field';
