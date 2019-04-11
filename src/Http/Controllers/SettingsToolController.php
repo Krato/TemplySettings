@@ -34,7 +34,16 @@ class SettingsToolController extends Controller
         //Save data
         foreach (config('temply.settings') as $key => $setting) {
             $requestValue = $this->getRequestValue($request, $key, $setting);
-            if ($requestValue != null) {
+
+            if ($setting['type'] == 'image') {
+                if ($requestValue != null) {
+                    setting([$key => $requestValue]);
+                    setting()->save();
+                }
+            } else {
+                if ($requestValue === null) {
+                    $requestValue = '';
+                }
                 setting([$key => $requestValue]);
                 setting()->save();
             }
@@ -211,7 +220,9 @@ class SettingsToolController extends Controller
         if ($data !== false) {
             $disk = (isset($setting['disk'])) ? $setting['disk'] : 'public';
             $data = json_decode($data);
-            Storage::disk($disk)->delete($data->path);
+            if (optional($data)->path != null) {
+                Storage::disk($disk)->delete($data->path);
+            }
         }
     }
 }
