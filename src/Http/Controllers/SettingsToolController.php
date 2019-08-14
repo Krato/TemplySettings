@@ -2,6 +2,7 @@
 
 namespace Infinety\TemplySettings\Http\Controllers;
 
+use App\Models\Tenant\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -23,29 +24,33 @@ class SettingsToolController extends Controller
     {
         //Validation
         $toValidate = collect([]);
-        foreach (config('temply.settings') as $key => $setting) {
-            if (isset($setting['rules'])) {
-                $toValidate->put($key, $setting['rules']);
+        foreach (config('temply.settings') as $tab) {
+            if (str_slug($tab['name']) == $request->tab) {
+                foreach ($tab['options'] as $key => $setting) {
+                    if (isset($setting['rules'])) {
+                        $toValidate->put($key, $setting['rules']);
+                    }
+                }
             }
         }
 
-        Validator::make($request->all(), $toValidate->toArray())->validate();
+        // $fields = $request->get('fields[]');
+        // $values = collect($fields)->flatMap(function ($values, $key) {
+        //     return $values;
+        // })->toArray();
+
+        Validator::make($request->except(['tab']), $toValidate->toArray())->validate();
 
         //Save data
-        foreach (config('temply.settings') as $key => $setting) {
-            $requestValue = $this->getRequestValue($request, $key, $setting);
-
-            if ($setting['type'] == 'image') {
-                if ($requestValue != null) {
-                    setting([$key => $requestValue]);
-                    setting()->save();
+        foreach (config('temply.settings') as $tab) {
+            if (str_slug($tab['name']) == $request->tab) {
+                foreach ($tab['options'] as $key => $setting) {
+                    $requestValue = $this->getRequestValue($request, $key, $setting);
+                    if ($requestValue != null) {
+                        setting([$key => $requestValue]);
+                        setting()->save();
+                    }
                 }
-            } else {
-                if ($requestValue === null) {
-                    $requestValue = '';
-                }
-                setting([$key => $requestValue]);
-                setting()->save();
             }
         }
 
@@ -61,13 +66,23 @@ class SettingsToolController extends Controller
     {
         $settings = [];
 
-        foreach (config('temply.settings') as $key => $setting) {
-            $hide = (isset($setting['hide'])) ? $setting['hide'] : false;
+        $tabs = collect(config('temply.settings'))->map(function ($tab) {
+            $options = collect($tab['options'])->map(function ($setting, $key) {
+                $hide = (isset($setting['hide'])) ? $setting['hide'] : false;
+                $options = (isset($setting['options'])) ? $setting['options'] : [];
 
-            $settings[] = $this->constructField($key, $setting['name'], $setting['type'], setting($key, null), __($setting['help']), $hide);
-        }
+                return $this->constructField($key, $setting['name'], $setting['type'], setting($key, null), __($setting['help']), $hide, $options);
+            });
 
-        return $settings;
+            return [
+                'name'        => $tab['name'],
+                'key'         => str_slug($tab['name']),
+                'description' => $tab['description'],
+                'options'     => $options->values()->all(),
+            ];
+        });
+
+        return $tabs;
     }
 
     /**
@@ -106,7 +121,7 @@ class SettingsToolController extends Controller
      * @param $value
      * @param $help
      */
-    private function constructField($key, $name, $type, $value, $help, $hide)
+    private function constructField($key, $name, $type, $value, $help, $hide, $options = [])
     {
         $field = [
             'vue'    => $this->getNovaType($type),
@@ -122,6 +137,10 @@ class SettingsToolController extends Controller
             ],
         ];
 
+        if ($key == 'main_menu' || $key == 'footer_menu') {
+            $options = $this->getMenusFromDB();
+        }
+
         if ($type == 'image') {
             $field['field']['previewUrl'] = $this->getFileUrl($value);
             $field['field']['thumbnailUrl'] = $this->getFileUrl($value);
@@ -134,6 +153,10 @@ class SettingsToolController extends Controller
         if ($type == 'place') {
             $field['field']['latitude'] = 'latitude';
             $field['field']['longitude'] = 'longitude';
+        }
+
+        if ($type == 'select') {
+            $field['field']['options'] = $this->transformOptionsSelect($options);
         }
 
         return $field;
@@ -154,6 +177,10 @@ class SettingsToolController extends Controller
 
         if ($type == 'textarea') {
             return 'form-textarea-field';
+        }
+
+        if ($type == 'select') {
+            return 'form-select-field';
         }
 
         return 'form-text-field';
@@ -220,9 +247,26 @@ class SettingsToolController extends Controller
         if ($data !== false) {
             $disk = (isset($setting['disk'])) ? $setting['disk'] : 'public';
             $data = json_decode($data);
-            if (optional($data)->path != null) {
-                Storage::disk($disk)->delete($data->path);
-            }
+            Storage::disk($disk)->delete($data->path);
         }
+    }
+
+    private function getMenusFromDB()
+    {
+        $menus = Menu::all();
+
+        return collect($menus)->map(function ($menu) {
+            return ['label' => $menu->name, 'value' => $menu->slug];
+        })->values()->all();
+    }
+
+    /**
+     * @param $options
+     */
+    private function transformOptionsSelect($options)
+    {
+        return collect($options ?? [])->map(function ($label, $value) {
+            return is_array($label) ? $label + ['value' => $value] : ['label' => $label, 'value' => $value];
+        })->values()->all();
     }
 }
