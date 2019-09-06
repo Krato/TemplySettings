@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Infinety\TemplySettings\Http\Events\SettingsUpdatedEvent;
 
 class SettingsToolController extends Controller
 {
@@ -53,6 +54,9 @@ class SettingsToolController extends Controller
                 }
             }
         }
+
+        //Fire event
+        event(new SettingsUpdatedEvent());
 
         return response()->json([
             'success' => true,
